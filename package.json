@@ -1,0 +1,22 @@
+{
+  "name": "budgetapp",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.5.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "api": "pnpm --filter @budgetapp/api start:dev",
+    "mobile": "pnpm --filter @budgetapp/mobile start"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.6.3"
+  }
+}
