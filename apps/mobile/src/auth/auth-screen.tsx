@@ -23,20 +23,24 @@ export function AuthScreen() {
       password,
     };
 
-    const { data, error } =
-      mode === 'sign-up'
-        ? await supabase.auth.signUp(credentials)
-        : await supabase.auth.signInWithPassword(credentials);
+    try {
+      const { data, error } =
+        mode === 'sign-up'
+          ? await supabase.auth.signUp(credentials)
+          : await supabase.auth.signInWithPassword(credentials);
 
-    setPendingMode(null);
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
 
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    if (mode === 'sign-up' && !data.session) {
-      setMessage('Check your email to confirm your account, then sign in.');
+      if (mode === 'sign-up' && !data.session) {
+        setMessage('Check your email to confirm your account, then sign in.');
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setPendingMode(null);
     }
   }
 

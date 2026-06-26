@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from './api';
 
-// ponytail: hand-rolled query hook; swap to TanStack Query when query count grows.
 export function useApiQuery<T>(path: string) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +19,26 @@ export function useApiQuery<T>(path: string) {
   }, [path]);
 
   useEffect(() => {
-    void refetch();
-  }, [refetch]);
+    let active = true;
+
+    api<T>(path)
+      .then((nextData) => {
+        if (!active) return;
+        setData(nextData);
+        setError(null);
+      })
+      .catch((e) => {
+        if (!active) return;
+        setError(e instanceof Error ? e.message : 'Failed to load');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [path]);
 
   return { data, error, loading, refetch };
 }
