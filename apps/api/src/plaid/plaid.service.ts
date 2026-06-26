@@ -61,8 +61,50 @@ export class PlaidService {
       country_codes: [CountryCode.Us],
       language: "en",
       webhook: this.config.get<string>("PLAID_WEBHOOK_URL") || undefined,
+      // Hosted Link: Plaid hosts the bank picker + login so the app can open it
+      // in a browser (expo-web-browser) — no native Plaid SDK / dev build needed.
+      hosted_link: {},
     });
     return res.data;
+  }
+
+  /**
+   * Hosted Link finished: pull the public token(s) from the Link session and
+   * exchange each one (multi-Item Link can add more than one).
+   */
+  async completeHostedLink(
+    userId: string,
+    linkToken: string,
+  ): Promise<{ itemIds: string[] }> {
+    const res = await this.getClient().linkTokenGet({ link_token: linkToken });
+    const publicTokens = (res.data.link_sessions ?? [])
+      .flatMap((s) => s.results?.item_add_results ?? [])
+      .map((r) => r.public_token);
+
+    const itemIds: string[] = [];
+    for (const publicToken of publicTokens) {
+      const { itemId } = await this.exchangePublicToken(userId, publicToken);
+      itemIds.push(itemId);
+    }
+    return { itemIds };
+  }
+
+  /** Re-sync every item the user owns (used by the app's pull-to-refresh). */
+  async syncAllForUser(userId: string) {
+    const items = await this.prisma.plaidItem.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+    let added = 0;
+    let modified = 0;
+    let removed = 0;
+    for (const { id } of items) {
+      const r = await this.syncTransactions(id, userId);
+      added += r.added;
+      modified += r.modified;
+      removed += r.removed;
+    }
+    return { items: items.length, added, modified, removed };
   }
 
   /**
@@ -147,12 +189,16 @@ export class PlaidService {
    */
   async syncTransactions(
     itemId: string,
+    ownerId?: string,
   ): Promise<{ added: number; modified: number; removed: number }> {
     const item = await this.prisma.plaidItem.findUnique({
       where: { id: itemId },
       include: { accounts: true },
     });
-    if (!item) throw new NotFoundException(`Plaid item ${itemId} not found`);
+    // NotFound (not Forbidden) on owner mismatch so we don't leak item existence.
+    if (!item || (ownerId && item.userId !== ownerId)) {
+      throw new NotFoundException(`Plaid item ${itemId} not found`);
+    }
 
     const client = this.getClient();
     const accessToken = this.crypto.decrypt(item.accessTokenEnc);
