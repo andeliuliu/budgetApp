@@ -24,13 +24,11 @@ export function mapPlaidCategory(
       return "dining";
     case "GENERAL_MERCHANDISE":
       return "shopping";
+    case "TRANSPORTATION":
+      return "transportation"; // taxis/ride-shares, public transit, parking, etc.
     case "RENT_AND_UTILITIES":
       return "utilities";
-    case "LOAN_PAYMENTS":
-      return "loans";
-    case "TRANSFER_IN":
-    case "TRANSFER_OUT":
-      return "transfers";
+    // Loans and transfers (and anything else) fall into the single "other" bin.
     default:
       return "other";
   }

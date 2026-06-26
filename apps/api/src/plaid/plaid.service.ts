@@ -11,6 +11,7 @@ import {
 } from "plaid";
 import { CryptoService } from "../crypto/crypto.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { isTransferCategory, mapPlaidCategory } from "./category-mapping";
 import { toTransactionRecord } from "./transaction-transform";
 
 /**
@@ -105,6 +106,35 @@ export class PlaidService {
       removed += r.removed;
     }
     return { items: items.length, added, modified, removed };
+  }
+
+  /**
+   * Re-run category mapping over already-stored transactions (using their saved
+   * Plaid PFC fields) — fixes existing rows after the mapping changes, no Plaid call.
+   */
+  async recategorizeForUser(userId: string): Promise<{ updated: number }> {
+    const txns = await this.prisma.transaction.findMany({
+      where: { userId },
+      select: { id: true, pfcPrimary: true, pfcDetailed: true, category: true },
+    });
+    const updates = txns
+      .map((t) => ({
+        id: t.id,
+        old: t.category,
+        category: mapPlaidCategory(t.pfcPrimary, t.pfcDetailed),
+        isTransfer: isTransferCategory(t.pfcPrimary),
+      }))
+      .filter((t) => t.category !== t.old);
+
+    // ponytail: plain sequential updates (no wrapping tx) — idempotent and avoids
+    // the same pooler transaction-timeout; fine for personal volume.
+    for (const u of updates) {
+      await this.prisma.transaction.update({
+        where: { id: u.id },
+        data: { category: u.category, isTransfer: u.isTransfer },
+      });
+    }
+    return { updated: updates.length };
   }
 
   /**
@@ -224,26 +254,27 @@ export class PlaidService {
       cursor = res.data.next_cursor;
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      for (const pt of [...added, ...modified]) {
-        const accountId = accountIdByPlaidId.get(pt.account_id);
-        if (!accountId) continue; // belongs to an account we don't track
-        const record = toTransactionRecord(pt, accountId, item.userId);
-        await tx.transaction.upsert({
-          where: { plaidTransactionId: record.plaidTransactionId },
-          create: record,
-          update: record,
-        });
-      }
-      if (removed.length > 0) {
-        await tx.transaction.deleteMany({
-          where: { plaidTransactionId: { in: removed.filter(Boolean) } },
-        });
-      }
-      await tx.plaidItem.update({
-        where: { id: itemId },
-        data: { transactionsCursor: cursor },
+    // ponytail: no interactive $transaction here — it timed out over the Supabase
+    // pooler doing many sequential upserts. Sync is idempotent, so we just write
+    // each row and advance the cursor last; a mid-way failure re-pulls next time.
+    for (const pt of [...added, ...modified]) {
+      const accountId = accountIdByPlaidId.get(pt.account_id);
+      if (!accountId) continue; // belongs to an account we don't track
+      const record = toTransactionRecord(pt, accountId, item.userId);
+      await this.prisma.transaction.upsert({
+        where: { plaidTransactionId: record.plaidTransactionId },
+        create: record,
+        update: record,
       });
+    }
+    if (removed.length > 0) {
+      await this.prisma.transaction.deleteMany({
+        where: { plaidTransactionId: { in: removed.filter(Boolean) } },
+      });
+    }
+    await this.prisma.plaidItem.update({
+      where: { id: itemId },
+      data: { transactionsCursor: cursor },
     });
 
     this.logger.log(

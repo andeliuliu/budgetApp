@@ -42,6 +42,13 @@ export class PlaidController {
     return this.plaid.syncAllForUser(user.id);
   }
 
+  /** Re-map stored transactions' categories after a mapping change. */
+  @Post("recategorize")
+  @UseGuards(SupabaseAuthGuard)
+  recategorize(@CurrentUser() user: AuthUser) {
+    return this.plaid.recategorizeForUser(user.id);
+  }
+
   /** Plaid calls this webhook when new transaction data is available — unauthenticated. */
   @Post("webhook")
   @HttpCode(200)

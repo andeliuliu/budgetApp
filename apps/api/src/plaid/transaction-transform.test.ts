@@ -49,8 +49,8 @@ describe("toTransactionRecord", () => {
       "a",
       "u",
     );
-    expect(r.category).toBe("transfers");
-    expect(r.isTransfer).toBe(true);
+    expect(r.category).toBe("other"); // transfers now fold into the "other" bin
+    expect(r.isTransfer).toBe(true); // ...but are still flagged as transfers
     expect(r.merchantName).toBeNull();
     expect(r.datetime).toBeNull();
   });

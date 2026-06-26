@@ -5,7 +5,7 @@ describe("mapPlaidCategory", () => {
   it("maps primary categories", () => {
     expect(mapPlaidCategory("FOOD_AND_DRINK", "FOOD_AND_DRINK_FAST_FOOD")).toBe("dining");
     expect(mapPlaidCategory("GENERAL_MERCHANDISE", null)).toBe("shopping");
-    expect(mapPlaidCategory("LOAN_PAYMENTS", null)).toBe("loans");
+    expect(mapPlaidCategory("TRANSPORTATION", "TRANSPORTATION_TAXIS_AND_RIDE_SHARES")).toBe("transportation");
     expect(mapPlaidCategory("RENT_AND_UTILITIES", "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY")).toBe("utilities");
   });
 
@@ -14,9 +14,10 @@ describe("mapPlaidCategory", () => {
     expect(mapPlaidCategory("RENT_AND_UTILITIES", "RENT_AND_UTILITIES_RENT")).toBe("rent");
   });
 
-  it("maps transfers", () => {
-    expect(mapPlaidCategory("TRANSFER_IN", null)).toBe("transfers");
-    expect(mapPlaidCategory("TRANSFER_OUT", null)).toBe("transfers");
+  it("folds loans and transfers into other", () => {
+    expect(mapPlaidCategory("TRANSFER_IN", null)).toBe("other");
+    expect(mapPlaidCategory("TRANSFER_OUT", null)).toBe("other");
+    expect(mapPlaidCategory("LOAN_PAYMENTS", null)).toBe("other");
   });
 
   it("falls back to other and is case-insensitive", () => {

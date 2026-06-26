@@ -10,13 +10,12 @@ export const CATEGORIES = [
   "grocery",
   "dining",
   "shopping",
+  "transportation",
   "investments",
   "savings",
   "rent",
   "utilities",
   "subscriptions",
-  "loans",
-  "transfers",
   "other",
 ] as const;
 
