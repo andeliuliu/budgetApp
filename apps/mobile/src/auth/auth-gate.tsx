@@ -1,17 +1,12 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spinner, YStack } from 'tamagui';
 
-import { ConnectBankScreen } from '@/plaid/connect-bank-screen';
+import { Home } from '@/home';
 import { AuthScreen } from './auth-screen';
 import { useAuth } from './auth-provider';
-import { MissingSupabaseConfigScreen } from './missing-supabase-config-screen';
 
 export function AuthGate() {
-  const { configReady, loading, session } = useAuth();
-
-  if (!configReady) {
-    return <MissingSupabaseConfigScreen />;
-  }
+  const { loading, session } = useAuth();
 
   if (loading) {
     return (
@@ -27,5 +22,5 @@ export function AuthGate() {
     return <AuthScreen />;
   }
 
-  return <ConnectBankScreen />;
+  return <Home />;
 }

@@ -25,8 +25,8 @@ export function AuthScreen() {
 
     const { data, error } =
       mode === 'sign-up'
-        ? await supabase!.auth.signUp(credentials)
-        : await supabase!.auth.signInWithPassword(credentials);
+        ? await supabase.auth.signUp(credentials)
+        : await supabase.auth.signInWithPassword(credentials);
 
     setPendingMode(null);
 
