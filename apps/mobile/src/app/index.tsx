@@ -11,13 +11,12 @@ const CATEGORY_LABELS: Record<Category, string> = {
   grocery: 'Groceries',
   dining: 'Dining',
   shopping: 'Shopping',
+  transportation: 'Transportation',
   investments: 'Investments',
   savings: 'Savings',
   rent: 'Rent',
   utilities: 'Utilities',
   subscriptions: 'Subscriptions',
-  loans: 'Loans',
-  transfers: 'Transfers',
   other: 'Other',
 };
 
