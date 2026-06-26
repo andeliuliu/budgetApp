@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post } from "@nestjs/common";
+import { Body, Controller, HttpCode, Param, Post } from "@nestjs/common";
 import { PlaidService } from "./plaid.service";
 
 @Controller("plaid")
@@ -14,8 +14,17 @@ export class PlaidController {
 
   /** Mobile posts the public token here after the user finishes Link. */
   @Post("exchange")
-  exchange(@Body("publicToken") publicToken: string) {
-    return this.plaid.exchangePublicToken(publicToken);
+  exchange(
+    @Body("userId") userId: string,
+    @Body("publicToken") publicToken: string,
+  ) {
+    return this.plaid.exchangePublicToken(userId, publicToken);
+  }
+
+  /** Manually trigger a re-sync for an item (also runs automatically on webhook). */
+  @Post("items/:id/sync")
+  sync(@Param("id") id: string) {
+    return this.plaid.syncTransactions(id);
   }
 
   /** Plaid calls this webhook when new transaction data is available. */

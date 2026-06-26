@@ -1,0 +1,143 @@
+// budgetApp data model. Hosted on Supabase Postgres; accessed by the NestJS
+// API via Prisma. Row-Level Security policies live in supabase/migrations.
+//
+// Money is always stored as integer cents (Int). Personal-finance amounts fit
+// comfortably in a 32-bit int (max ~$21.4M), and Int avoids BigInt JSON pain.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Mirrors Supabase `auth.users` (same UUID), kept in sync by a trigger.
+model User {
+  id        String   @id @db.Uuid
+  email     String?  @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items        PlaidItem[]
+  accounts     Account[]
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("users")
+}
+
+/// One linked bank login (a Plaid Item). The access token is the crown jewel —
+/// stored encrypted, never returned to the client, never logged.
+model PlaidItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  plaidItemId        String   @unique @map("plaid_item_id")
+  institutionName    String?  @map("institution_name")
+  accessTokenEnc     String   @map("access_token_enc")
+  transactionsCursor String?  @map("transactions_cursor")
+  status             String   @default("active")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts Account[]
+
+  @@index([userId])
+  @@map("plaid_items")
+}
+
+model Account {
+  id                    String  @id @default(uuid()) @db.Uuid
+  itemId                String  @map("item_id") @db.Uuid
+  userId                String  @map("user_id") @db.Uuid
+  plaidAccountId        String  @unique @map("plaid_account_id")
+  name                  String
+  mask                  String?
+  type                  String
+  subtype               String?
+  currentBalanceCents   Int?    @map("current_balance_cents")
+  availableBalanceCents Int?    @map("available_balance_cents")
+
+  item         PlaidItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Transaction {
+  id                 String    @id @default(uuid()) @db.Uuid
+  accountId          String    @map("account_id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  plaidTransactionId String    @unique @map("plaid_transaction_id")
+  /// Positive = money out (spend), negative = money in. Integer cents.
+  amountCents        Int       @map("amount_cents")
+  isoCurrency        String    @default("USD") @map("iso_currency")
+  date               DateTime  @db.Date
+  datetime           DateTime?
+  name               String
+  merchantName       String?   @map("merchant_name")
+  category           String    @default("other")
+  pfcPrimary         String?   @map("pfc_primary")
+  pfcDetailed        String?   @map("pfc_detailed")
+  lat                Float?
+  lon                Float?
+  address            String?
+  city               String?
+  region             String?
+  pending            Boolean   @default(false)
+  isTransfer         Boolean   @default(false) @map("is_transfer")
+  /// When a split exists, what I personally owe; null = show the full amount.
+  personalShareCents Int?      @map("personal_share_cents")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  split   Split?
+
+  @@index([userId, date])
+  @@index([accountId])
+  @@map("transactions")
+}
+
+model Budget {
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  category   String
+  period     String // "YYYY-MM"
+  limitCents Int    @map("limit_cents")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, period])
+  @@map("budgets")
+}
+
+model Split {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @unique @map("transaction_id") @db.Uuid
+  type          String // even | manual
+  totalCents    Int      @map("total_cents")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  transaction  Transaction        @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  participants SplitParticipant[]
+
+  @@map("splits")
+}
+
+model SplitParticipant {
+  id              String  @id @default(uuid()) @db.Uuid
+  splitId         String  @map("split_id") @db.Uuid
+  displayName     String  @map("display_name")
+  venmoHandle     String? @map("venmo_handle")
+  amountOwedCents Int     @map("amount_owed_cents")
+  status          String  @default("pending") // pending | requested | settled
+
+  split Split @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  @@index([splitId])
+  @@map("split_participants")
+}
