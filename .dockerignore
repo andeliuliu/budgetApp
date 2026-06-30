@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.expo
+**/.turbo
+**/.next
+.git
+*.log
+.env
+.env.*

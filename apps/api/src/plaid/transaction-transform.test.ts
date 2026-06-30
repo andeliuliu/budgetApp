@@ -33,6 +33,7 @@ describe("toTransactionRecord", () => {
     const r = toTransactionRecord(fakePlaidTx(), "acc-uuid", "user-uuid");
     expect(r.category).toBe("grocery");
     expect(r.isTransfer).toBe(false);
+    expect(r.reviewed).toBe(false); // real spend starts unreviewed (pending queue)
     expect(r.lat).toBe(40.7);
     expect(r.datetime).toEqual(new Date("2026-06-20T18:30:00Z"));
     expect(r.accountId).toBe("acc-uuid");
@@ -51,6 +52,7 @@ describe("toTransactionRecord", () => {
     );
     expect(r.category).toBe("other"); // transfers now fold into the "other" bin
     expect(r.isTransfer).toBe(true); // ...but are still flagged as transfers
+    expect(r.reviewed).toBe(false); // ...and enter the pending queue for triage
     expect(r.merchantName).toBeNull();
     expect(r.datetime).toBeNull();
   });

@@ -114,7 +114,8 @@ export class PlaidService {
    */
   async recategorizeForUser(userId: string): Promise<{ updated: number }> {
     const txns = await this.prisma.transaction.findMany({
-      where: { userId },
+      // Only re-derive rows the user hasn't triaged — never clobber a manual pick.
+      where: { userId, reviewed: false },
       select: { id: true, pfcPrimary: true, pfcDetailed: true, category: true },
     });
     const updates = txns
@@ -261,10 +262,13 @@ export class PlaidService {
       const accountId = accountIdByPlaidId.get(pt.account_id);
       if (!accountId) continue; // belongs to an account we don't track
       const record = toTransactionRecord(pt, accountId, item.userId);
+      // On update, leave category/reviewed alone — they're the user's to set once
+      // triaged. recategorize re-derives category for unreviewed rows separately.
+      const { category: _cat, reviewed: _rev, ...mutable } = record;
       await this.prisma.transaction.upsert({
         where: { plaidTransactionId: record.plaidTransactionId },
         create: record,
-        update: record,
+        update: mutable,
       });
     }
     if (removed.length > 0) {

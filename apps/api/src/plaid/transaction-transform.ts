@@ -24,6 +24,7 @@ export interface TransactionRecord {
   region: string | null;
   pending: boolean;
   isTransfer: boolean;
+  reviewed: boolean;
 }
 
 /**
@@ -57,5 +58,8 @@ export function toTransactionRecord(
     region: tx.location?.region ?? null,
     pending: tx.pending,
     isTransfer: isTransferCategory(pfc?.primary),
+    // Everything starts unreviewed (pending) — including P2P transfers (Venmo/Zelle).
+    // Plaid can't tell what those were for, so the user triages them in-app.
+    reviewed: false,
   };
 }

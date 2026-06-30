@@ -12,6 +12,7 @@ export const CATEGORY_META: Record<Category, { label: string; emoji: string }> =
   utilities: { label: 'Utilities', emoji: '💡' },
   subscriptions: { label: 'Subscriptions', emoji: '🔁' },
   other: { label: 'Other', emoji: '💳' },
+  trash: { label: 'Trash', emoji: '🗑️' },
 };
 
 export function categoryMeta(category: string) {

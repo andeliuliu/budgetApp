@@ -1,0 +1,19 @@
+# Deploy from the repo root: `fly deploy`
+# Build context = this dir (repo root) so the monorepo lockfile + packages are visible.
+app = "budgetapp-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # ponytail: scale-to-zero — free when idle, ~1-2s cold start on the first request after a nap.
+  # Set min_machines_running = 1 if the cold start annoys you (costs a bit more).
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0

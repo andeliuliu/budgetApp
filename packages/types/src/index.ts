@@ -17,6 +17,8 @@ export const CATEGORIES = [
   "utilities",
   "subscriptions",
   "other",
+  // Excluded from spend totals; kept only for history (e.g. refunds, junk rows).
+  "trash",
 ] as const;
 
 export const categorySchema = z.enum(CATEGORIES);

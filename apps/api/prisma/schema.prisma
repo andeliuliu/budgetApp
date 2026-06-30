@@ -88,6 +88,10 @@ model Transaction {
   region             String?
   pending            Boolean   @default(false)
   isTransfer         Boolean   @default(false) @map("is_transfer")
+  /// True once the user has triaged this row (filed it into a category, incl.
+  /// deliberately leaving it in "other"). Unreviewed rows are the pending queue;
+  /// recategorize/sync never touch reviewed rows so the user's pick survives.
+  reviewed           Boolean   @default(false)
   /// When a split exists, what I personally owe; null = show the full amount.
   personalShareCents Int?      @map("personal_share_cents")
   createdAt          DateTime  @default(now()) @map("created_at")
